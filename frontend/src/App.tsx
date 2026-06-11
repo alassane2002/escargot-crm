@@ -12,6 +12,7 @@ import Stock from './pages/Stock'
 import Calendar from './pages/Calendar'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
+import Debug from './pages/Debug'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -24,6 +25,7 @@ function AppRoutes() {
   const { isAuthenticated } = useAuth()
   return (
     <Routes>
+      <Route path="/debug" element={<Debug />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/*" element={
         <PrivateRoute>
