@@ -132,6 +132,7 @@ export default function Login() {
         <p className="text-center text-xs text-gray-400 mt-6">
           Compte par défaut : admin / admin123
         </p>
+        <p className="hidden" aria-hidden="true">v20260611</p>
       </div>
     </div>
   )
