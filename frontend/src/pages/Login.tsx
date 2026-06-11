@@ -1,75 +1,59 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shell, Loader2 } from 'lucide-react'
 import { login as apiLogin } from '../api'
 import { useAuth } from '../contexts/AuthContext'
 
-const API_ROOT = import.meta.env.VITE_API_URL
-  ? import.meta.env.VITE_API_URL.replace('/api', '')
-  : `https://${window.location.hostname}:8000`
+const MAX_RETRIES = 10
+const RETRY_DELAY_MS = 6000
 
 export default function Login() {
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [ready, setReady] = useState(false)
-  const [warmSec, setWarmSec] = useState(0)
+  const [retryInfo, setRetryInfo] = useState('')
   const { login } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    let cancelled = false
-    let elapsed = 0
-
-    const tryPing = async () => {
-      while (!cancelled) {
-        try {
-          const ctrl = new AbortController()
-          const timer = setTimeout(() => ctrl.abort(), 5000)
-          const res = await fetch(`${API_ROOT}/`, { signal: ctrl.signal })
-          clearTimeout(timer)
-          if (res.ok) {
-            const data = await res.json().catch(() => null)
-            if (data?.message) {
-              if (!cancelled) setReady(true)
-              return
-            }
-          }
-        } catch {
-          // still starting up
-        }
-        if (cancelled) return
-        elapsed += 5
-        setWarmSec(elapsed)
-        await new Promise(r => setTimeout(r, 5000))
-      }
-    }
-
-    tryPing()
-    return () => { cancelled = true }
-  }, [])
+  const isTransient = (status: number | undefined) =>
+    !status || status === 405 || status === 502 || status === 503 || status === 504
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setRetryInfo('')
     setLoading(true)
-    try {
-      const res = await apiLogin(username, password)
-      login(res.data.access_token)
-      navigate('/')
-    } catch (err: unknown) {
-      const status = (err as { response?: { status: number } })?.response?.status
-      if (status === 401) {
-        setError("Identifiants incorrects. Vérifiez votre nom d'utilisateur et mot de passe.")
-      } else if (!status || status === 405 || status === 502 || status === 503) {
-        setError('Le serveur démarre encore. Patientez quelques secondes et réessayez.')
-      } else {
-        setError(`Erreur serveur (${status}). Réessayez dans quelques secondes.`)
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const res = await apiLogin(username, password)
+        login(res.data.access_token)
+        navigate('/')
+        return
+      } catch (err: unknown) {
+        const status = (err as { response?: { status: number } })?.response?.status
+        if (status === 401) {
+          setError("Identifiants incorrects. Vérifiez votre nom d'utilisateur et mot de passe.")
+          break
+        }
+        if (isTransient(status)) {
+          if (attempt < MAX_RETRIES - 1) {
+            const remaining = MAX_RETRIES - attempt - 1
+            setRetryInfo(`Serveur en démarrage... tentative ${attempt + 2}/${MAX_RETRIES} dans 6s (encore ${remaining})`)
+            await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
+            continue
+          }
+          setError('Le serveur ne répond pas après plusieurs tentatives. Réessayez dans 30 secondes.')
+          break
+        }
+        setError(`Erreur serveur (${status}). Réessayez.`)
+        break
       }
-    } finally {
-      setLoading(false)
     }
+
+    setLoading(false)
+    setRetryInfo('')
   }
 
   return (
@@ -113,26 +97,26 @@ export default function Login() {
             </div>
           )}
 
-          {!ready && (
-            <div className="flex items-center gap-2 text-amber-600 text-xs justify-center">
-              <Loader2 size={14} className="animate-spin" />
-              <span>Démarrage du serveur{warmSec > 0 ? ` (${warmSec}s)` : '...'}</span>
+          {retryInfo && (
+            <div className="flex items-center gap-2 text-amber-600 text-xs justify-center bg-amber-50 rounded-lg px-3 py-2">
+              <Loader2 size={13} className="animate-spin flex-shrink-0" />
+              <span>{retryInfo}</span>
             </div>
           )}
 
           <button
             type="submit"
-            disabled={loading || !ready}
-            className="w-full bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-wait"
+            disabled={loading}
+            className="w-full bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-60"
           >
-            {loading ? 'Connexion...' : !ready ? 'En attente du serveur...' : 'Se connecter'}
+            {loading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
 
         <p className="text-center text-xs text-gray-400 mt-6">
           Compte par défaut : admin / admin123
         </p>
-        <p className="hidden" aria-hidden="true">v20260611</p>
+        <p className="hidden" aria-hidden="true">v20260612</p>
       </div>
     </div>
   )
