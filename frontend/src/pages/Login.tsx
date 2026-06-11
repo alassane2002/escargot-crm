@@ -20,8 +20,15 @@ export default function Login() {
       const res = await apiLogin(username, password)
       login(res.data.access_token)
       navigate('/')
-    } catch {
-      setError('Identifiants incorrects. Vérifiez votre nom d\'utilisateur et mot de passe.')
+    } catch (err: unknown) {
+      const status = (err as { response?: { status: number } })?.response?.status
+      if (status === 401) {
+        setError('Identifiants incorrects. Vérifiez votre nom d\'utilisateur et mot de passe.')
+      } else if (!status) {
+        setError('Serveur inaccessible. Le service démarre, réessayez dans 30 secondes.')
+      } else {
+        setError(`Erreur serveur (${status}). Réessayez dans quelques secondes.`)
+      }
     } finally {
       setLoading(false)
     }
