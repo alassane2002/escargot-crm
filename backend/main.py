@@ -1,5 +1,4 @@
 import os
-import threading
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
@@ -34,19 +33,35 @@ app.include_router(exports.router, prefix="/api/exports", tags=["Exports"])
 app.include_router(calendar_events.router, prefix="/api/calendar", tags=["Calendrier"])
 
 
-def _init_db():
-    try:
-        Base.metadata.create_all(bind=engine)
-        seed.seed_database()
-    except Exception as e:
-        print(f"DB init error: {e}")
-
-
 @app.on_event("startup")
 async def startup_event():
-    threading.Thread(target=_init_db, daemon=True).start()
+    import traceback
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("[OK] Tables created")
+        seed.seed_database()
+        print("[OK] Seed done")
+    except Exception as e:
+        print(f"[ERR] Startup DB init: {e}")
+        traceback.print_exc()
 
 
 @app.get("/")
 def root():
     return {"message": "Escargot CRM API v1.0", "docs": "/docs"}
+
+
+@app.get("/db-status")
+def db_status():
+    import traceback as tb
+    try:
+        from sqlalchemy import text
+        from database import SessionLocal
+        db = SessionLocal()
+        try:
+            result = db.execute(text("SELECT COUNT(*) FROM users")).scalar()
+            return {"status": "ok", "users": result}
+        finally:
+            db.close()
+    except Exception as e:
+        return {"status": "error", "error": str(e), "traceback": tb.format_exc()}
