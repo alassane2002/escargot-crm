@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: escargot-crm-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: escargot-crm-db
+          property: connectionString
+      - key: ALLOWED_ORIGINS
+        value: "*"
+    autoDeploy: true
+
+databases:
+  - name: escargot-crm-db
+    databaseName: escargot_crm
+    user: escargot_admin
+    plan: free
