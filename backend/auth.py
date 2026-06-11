@@ -8,7 +8,10 @@ from schemas import LoginRequest, TokenResponse, ChangePasswordRequest
 import jwt
 from jwt.exceptions import InvalidTokenError
 from datetime import datetime, timedelta
-import bcrypt
+import hashlib
+import hmac
+import base64
+import os as _os
 
 SECRET_KEY = os.getenv("SECRET_KEY", "escargot-crm-secret-key-2026-xKjH9mNpQrStUvWxYzAbCdEf")
 ALGORITHM = "HS256"
@@ -18,12 +21,20 @@ security = HTTPBearer()
 router = APIRouter()
 
 
-def verify_password(plain_password, hashed_password):
-    return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
+def hash_password(password: str) -> str:
+    salt = _os.urandom(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 260000)
+    return base64.b64encode(salt + dk).decode()
 
 
-def hash_password(password):
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        data = base64.b64decode(hashed_password.encode())
+        salt, dk = data[:16], data[16:]
+        dk2 = hashlib.pbkdf2_hmac("sha256", plain_password.encode(), salt, 260000)
+        return hmac.compare_digest(dk, dk2)
+    except Exception:
+        return False
 
 
 def create_access_token(data: dict):
