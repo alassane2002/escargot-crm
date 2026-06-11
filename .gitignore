@@ -63,3 +63,7 @@ ehthumbs.db
 # Tests
 backend/test_api.py
 backend/gen_cert.py
+
+backend/runtime.txt
+backend/*.bak
+backend/test_api.py

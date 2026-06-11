@@ -38,30 +38,13 @@ async def startup_event():
     import traceback
     try:
         Base.metadata.create_all(bind=engine)
-        print("[OK] Tables created")
         seed.seed_database()
-        print("[OK] Seed done")
+        print("[OK] DB ready")
     except Exception as e:
-        print(f"[ERR] Startup DB init: {e}")
+        print(f"[ERR] DB init: {e}")
         traceback.print_exc()
 
 
 @app.get("/")
 def root():
     return {"message": "Escargot CRM API v1.0", "docs": "/docs"}
-
-
-@app.get("/db-status")
-def db_status():
-    import traceback as tb
-    try:
-        from sqlalchemy import text
-        from database import SessionLocal
-        db = SessionLocal()
-        try:
-            result = db.execute(text("SELECT COUNT(*) FROM users")).scalar()
-            return {"status": "ok", "users": result}
-        finally:
-            db.close()
-    except Exception as e:
-        return {"status": "error", "error": str(e), "traceback": tb.format_exc()}

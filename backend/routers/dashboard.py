@@ -48,12 +48,14 @@ def get_stats(db: Session = Depends(get_db), current_user=Depends(get_current_us
 
 @router.get("/ventes-mensuelles")
 def get_ventes_mensuelles(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    yr = extract('year', Vente.date)
+    mo = extract('month', Vente.date)
     results = db.query(
-        extract('year', Vente.date).label('annee'),
-        extract('month', Vente.date).label('mois'),
+        yr.label('annee'),
+        mo.label('mois'),
         func.count(Vente.id).label('count'),
         func.sum(Vente.montant_total).label('total')
-    ).group_by('annee', 'mois').order_by('annee', 'mois').all()
+    ).group_by(yr, mo).order_by(yr, mo).all()
 
     months_fr = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
     return [
@@ -70,11 +72,13 @@ def get_clients_par_statut(db: Session = Depends(get_db), current_user=Depends(g
 
 @router.get("/nouveaux-clients")
 def get_nouveaux_clients(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    yr = extract('year', Client.date_ajout)
+    mo = extract('month', Client.date_ajout)
     results = db.query(
-        extract('year', Client.date_ajout).label('annee'),
-        extract('month', Client.date_ajout).label('mois'),
+        yr.label('annee'),
+        mo.label('mois'),
         func.count(Client.id).label('count')
-    ).group_by('annee', 'mois').order_by('annee', 'mois').all()
+    ).group_by(yr, mo).order_by(yr, mo).all()
 
     months_fr = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
     return [
