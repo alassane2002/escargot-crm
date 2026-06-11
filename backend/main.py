@@ -1,4 +1,5 @@
 import os
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
@@ -7,7 +8,8 @@ from routers import clients, sales, formations, stock, relances, dashboard, expo
 import auth
 import seed
 
-Base.metadata.create_all(bind=engine)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Escargot CRM",
@@ -37,7 +39,16 @@ app.include_router(calendar_events.router, prefix="/api/calendar", tags=["Calend
 
 @app.on_event("startup")
 async def startup_event():
-    seed.seed_database()
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created/verified.")
+    except Exception as e:
+        logger.error(f"Database init error: {e}")
+    try:
+        seed.seed_database()
+        logger.info("Database seeded.")
+    except Exception as e:
+        logger.error(f"Seed error: {e}")
 
 
 @app.get("/")
