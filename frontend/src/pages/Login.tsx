@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shell } from 'lucide-react'
 import { login as apiLogin } from '../api'
@@ -9,8 +9,15 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [warming, setWarming] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    setWarming(true)
+    fetch(import.meta.env.VITE_API_URL?.replace('/api', '') || '/')
+      .finally(() => setWarming(false))
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -73,6 +80,12 @@ export default function Login() {
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
               {error}
             </div>
+          )}
+
+          {warming && (
+            <p className="text-center text-xs text-amber-600 animate-pulse">
+              Démarrage du serveur en cours...
+            </p>
           )}
 
           <button
