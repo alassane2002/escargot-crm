@@ -130,9 +130,9 @@ export default function Settings() {
             <h3 className="font-medium text-gray-700">Informations de l'application</h3>
             <div className="text-sm text-gray-500 mt-2 space-y-1">
               <p><strong>Application :</strong> Escargot CRM v1.0</p>
-              <p><strong>Backend :</strong> FastAPI + SQLite</p>
-              <p><strong>Frontend :</strong> React + TypeScript + Tailwind CSS</p>
-              <p><strong>Base de données :</strong> escargot_crm.db (SQLite local)</p>
+              <p><strong>Backend :</strong> FastAPI + PostgreSQL (Render)</p>
+              <p><strong>Frontend :</strong> React + TypeScript + Tailwind CSS (Vercel)</p>
+              <p><strong>Base de données :</strong> PostgreSQL — escargot_crm</p>
             </div>
           </div>
         </div>
