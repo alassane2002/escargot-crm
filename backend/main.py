@@ -65,3 +65,21 @@ def db_status():
             db.close()
     except Exception as e:
         return {"status": "error", "error": str(e), "traceback": tb.format_exc()}
+
+
+@app.post("/reset-admin")
+def reset_admin():
+    from database import SessionLocal
+    from models import User
+    from auth import hash_password
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.username == "admin").first()
+        if not user:
+            user = User(username="admin")
+            db.add(user)
+        user.password_hash = hash_password("admin123")
+        db.commit()
+        return {"status": "ok", "message": "Password reset to admin123"}
+    finally:
+        db.close()
