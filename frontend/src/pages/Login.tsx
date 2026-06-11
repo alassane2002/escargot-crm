@@ -4,8 +4,8 @@ import { Shell, Loader2 } from 'lucide-react'
 import { login as apiLogin } from '../api'
 import { useAuth } from '../contexts/AuthContext'
 
-const MAX_RETRIES = 10
-const RETRY_DELAY_MS = 6000
+const MAX_RETRIES = 15
+const RETRY_DELAY_MS = 8000
 
 export default function Login() {
   const [username, setUsername] = useState('admin')
@@ -17,7 +17,7 @@ export default function Login() {
   const navigate = useNavigate()
 
   const isTransient = (status: number | undefined) =>
-    !status || status === 405 || status === 502 || status === 503 || status === 504
+    !status || status === 405 || (status >= 500 && status <= 599)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,12 +39,12 @@ export default function Login() {
         }
         if (isTransient(status)) {
           if (attempt < MAX_RETRIES - 1) {
-            const remaining = MAX_RETRIES - attempt - 1
-            setRetryInfo(`Serveur en démarrage... tentative ${attempt + 2}/${MAX_RETRIES} dans 6s (encore ${remaining})`)
+            const elapsed = (attempt + 1) * RETRY_DELAY_MS / 1000
+            setRetryInfo(`Serveur en démarrage... ${elapsed}s écoulées, tentative ${attempt + 2}/${MAX_RETRIES}`)
             await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
             continue
           }
-          setError('Le serveur ne répond pas après plusieurs tentatives. Réessayez dans 30 secondes.')
+          setError('Le serveur est trop long à démarrer. Réessayez dans 30 secondes.')
           break
         }
         setError(`Erreur serveur (${status}). Réessayez.`)
