@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User
 from schemas import LoginRequest, TokenResponse, ChangePasswordRequest
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import InvalidTokenError
 from datetime import datetime, timedelta
 import bcrypt
 
@@ -29,7 +30,7 @@ def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)  # PyJWT 2.x returns str
 
 
 def get_current_user(
@@ -41,7 +42,7 @@ def get_current_user(
         username: str = payload.get("sub")
         if not username:
             raise HTTPException(status_code=401, detail="Token invalide")
-    except JWTError:
+    except InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token invalide")
 
     user = db.query(User).filter(User.username == username).first()
