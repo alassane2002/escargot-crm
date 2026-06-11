@@ -1,22 +1,53 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shell } from 'lucide-react'
+import { Shell, Loader2 } from 'lucide-react'
 import { login as apiLogin } from '../api'
 import { useAuth } from '../contexts/AuthContext'
+
+const API_ROOT = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace('/api', '')
+  : `https://${window.location.hostname}:8000`
 
 export default function Login() {
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [warming, setWarming] = useState(false)
+  const [ready, setReady] = useState(false)
+  const [warmSec, setWarmSec] = useState(0)
   const { login } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    setWarming(true)
-    fetch(import.meta.env.VITE_API_URL?.replace('/api', '') || '/')
-      .finally(() => setWarming(false))
+    let cancelled = false
+    let elapsed = 0
+
+    const tryPing = async () => {
+      while (!cancelled) {
+        try {
+          const ctrl = new AbortController()
+          const timer = setTimeout(() => ctrl.abort(), 5000)
+          const res = await fetch(`${API_ROOT}/`, { signal: ctrl.signal })
+          clearTimeout(timer)
+          if (res.ok) {
+            const data = await res.json().catch(() => null)
+            if (data?.message) {
+              if (!cancelled) setReady(true)
+              return
+            }
+          }
+        } catch {
+          // still starting up
+        }
+        if (cancelled) return
+        elapsed += 5
+        setWarmSec(elapsed)
+        await new Promise(r => setTimeout(r, 5000))
+      }
+    }
+
+    tryPing()
+    return () => { cancelled = true }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,9 +61,9 @@ export default function Login() {
     } catch (err: unknown) {
       const status = (err as { response?: { status: number } })?.response?.status
       if (status === 401) {
-        setError('Identifiants incorrects. Vérifiez votre nom d\'utilisateur et mot de passe.')
-      } else if (!status) {
-        setError('Serveur inaccessible. Le service démarre, réessayez dans 30 secondes.')
+        setError("Identifiants incorrects. Vérifiez votre nom d'utilisateur et mot de passe.")
+      } else if (!status || status === 405 || status === 502 || status === 503) {
+        setError('Le serveur démarre encore. Patientez quelques secondes et réessayez.')
       } else {
         setError(`Erreur serveur (${status}). Réessayez dans quelques secondes.`)
       }
@@ -82,18 +113,19 @@ export default function Login() {
             </div>
           )}
 
-          {warming && (
-            <p className="text-center text-xs text-amber-600 animate-pulse">
-              Démarrage du serveur en cours...
-            </p>
+          {!ready && (
+            <div className="flex items-center gap-2 text-amber-600 text-xs justify-center">
+              <Loader2 size={14} className="animate-spin" />
+              <span>Démarrage du serveur{warmSec > 0 ? ` (${warmSec}s)` : '...'}</span>
+            </div>
           )}
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-60"
+            disabled={loading || !ready}
+            className="w-full bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-wait"
           >
-            {loading ? 'Connexion...' : 'Se connecter'}
+            {loading ? 'Connexion...' : !ready ? 'En attente du serveur...' : 'Se connecter'}
           </button>
         </form>
 
