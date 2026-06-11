@@ -1,4 +1,6 @@
 import os
+import asyncio
+import threading
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
@@ -33,16 +35,20 @@ app.include_router(exports.router, prefix="/api/exports", tags=["Exports"])
 app.include_router(calendar_events.router, prefix="/api/calendar", tags=["Calendrier"])
 
 
-@app.on_event("startup")
-async def startup_event():
+def _init_db():
     try:
         Base.metadata.create_all(bind=engine)
-    except Exception as e:
-        print(f"DB init error: {e}")
-    try:
         seed.seed_database()
+        print("DB init complete.")
     except Exception as e:
-        print(f"Seed error: {e}")
+        print(f"DB init error (non-fatal): {e}")
+
+
+@app.on_event("startup")
+async def startup_event():
+    # Run DB init in background thread — never blocks the event loop
+    t = threading.Thread(target=_init_db, daemon=True)
+    t.start()
 
 
 @app.get("/")
