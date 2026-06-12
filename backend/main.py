@@ -36,9 +36,18 @@ app.include_router(calendar_events.router, prefix="/api/calendar", tags=["Calend
 @app.on_event("startup")
 async def startup_event():
     import traceback
+    from sqlalchemy import text
     try:
         Base.metadata.create_all(bind=engine)
         seed.seed_database()
+        # Migrate: add new columns if they don't exist yet
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE clients ADD COLUMN photo_ferme TEXT"))
+                conn.commit()
+                print("[OK] Migration: photo_ferme added")
+            except Exception:
+                pass  # Column already exists
         print("[OK] DB ready")
     except Exception as e:
         print(f"[ERR] DB init: {e}")
