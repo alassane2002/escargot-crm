@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shell, Loader2 } from 'lucide-react'
 import { login as apiLogin } from '../api'
@@ -34,20 +34,20 @@ export default function Login() {
       } catch (err: unknown) {
         const status = (err as { response?: { status: number } })?.response?.status
         if (status === 401) {
-          setError("Identifiants incorrects. VÃ©rifiez votre nom d'utilisateur et mot de passe.")
+          setError("Identifiants incorrects. Vérifiez votre nom d'utilisateur et mot de passe.")
           break
         }
         if (isTransient(status)) {
           if (attempt < MAX_RETRIES - 1) {
             const elapsed = (attempt + 1) * RETRY_DELAY_MS / 1000
-            setRetryInfo(`Serveur en dÃ©marrage... ${elapsed}s Ã©coulÃ©es, tentative ${attempt + 2}/${MAX_RETRIES}`)
+            setRetryInfo(`Serveur en démarrage... ${elapsed}s écoulées, tentative ${attempt + 2}/${MAX_RETRIES}`)
             await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
             continue
           }
-          setError('Le serveur est trop long Ã  dÃ©marrer. RÃ©essayez dans 30 secondes.')
+          setError('Le serveur est trop long à démarrer. Réessayez dans 30 secondes.')
           break
         }
-        setError(`Erreur serveur (${status}). RÃ©essayez.`)
+        setError(`Erreur serveur (${status}). Réessayez.`)
         break
       }
     }
@@ -64,7 +64,7 @@ export default function Login() {
             <Shell size={36} className="text-green-700" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Escargot CRM</h1>
-          <p className="text-gray-500 text-sm mt-1">Gestion d'Ã©levage d'escargots & hannetons</p>
+          <p className="text-gray-500 text-sm mt-1">Gestion d'élevage d'escargots & hannetons</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -87,7 +87,7 @@ export default function Login() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholder="••••••••"
             />
           </div>
 
@@ -114,9 +114,9 @@ export default function Login() {
         </form>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          Compte par dÃ©faut : admin / admin123
+          Compte par défaut : admin / admin123
         </p>
-        <p className="hidden" aria-hidden="true">v20260612c</p>
+        <p className="hidden" aria-hidden="true">v20260612d</p>
       </div>
     </div>
   )
