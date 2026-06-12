@@ -27,6 +27,7 @@ class Client(Base):
     date_ajout = Column(DateTime, default=datetime.utcnow)
     notes = Column(Text)
     statut = Column(String, default="Prospect")
+    photo_ferme = Column(Text, nullable=True)
 
     discussions = relationship("Discussion", back_populates="client", cascade="all, delete-orphan")
     relances = relationship("Relance", back_populates="client", cascade="all, delete-orphan")

@@ -28,6 +28,7 @@ class ClientBase(BaseModel):
     source: Optional[str] = None
     notes: Optional[str] = None
     statut: Optional[str] = "Prospect"
+    photo_ferme: Optional[str] = None
 
 class ClientCreate(ClientBase):
     pass
@@ -44,6 +45,7 @@ class ClientUpdate(BaseModel):
     source: Optional[str] = None
     notes: Optional[str] = None
     statut: Optional[str] = None
+    photo_ferme: Optional[str] = None
 
 class ClientResponse(ClientBase):
     id: int

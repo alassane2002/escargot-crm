@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, MessageSquare, ShoppingCart, Bell, MessageCircle, Phone } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, MessageSquare, ShoppingCart, Bell, MessageCircle, Phone, Camera, X } from 'lucide-react'
 import Modal from '../components/Modal'
-import { getClient, getDiscussions, addDiscussion, deleteDiscussion, getVentes, getRelances } from '../api'
+import { getClient, getDiscussions, addDiscussion, deleteDiscussion, getVentes, getRelances, updateClient } from '../api'
 import type { Client, Discussion, Vente, Relance } from '../types'
 
 function openWhatsApp(phone: string, name: string) {
@@ -38,6 +38,8 @@ export default function ClientDetail() {
   const [showDiscModal, setShowDiscModal] = useState(false)
   const [discText, setDiscText] = useState('')
   const [activeTab, setActiveTab] = useState<'discussions' | 'ventes' | 'relances'>('discussions')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!id) return
@@ -54,6 +56,26 @@ export default function ClientDetail() {
     setDiscText('')
     setShowDiscModal(false)
     getDiscussions(parseInt(id)).then(r => setDiscussions(r.data))
+  }
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !id) return
+    setUploadingPhoto(true)
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const base64 = reader.result as string
+      await updateClient(parseInt(id), { photo_ferme: base64 })
+      setClient(prev => prev ? { ...prev, photo_ferme: base64 } : prev)
+      setUploadingPhoto(false)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleDeletePhoto = async () => {
+    if (!id || !confirm('Supprimer la photo de la ferme ?')) return
+    await updateClient(parseInt(id), { photo_ferme: null })
+    setClient(prev => prev ? { ...prev, photo_ferme: undefined } : prev)
   }
 
   const handleDeleteDisc = async (discId: number) => {
@@ -126,6 +148,46 @@ export default function ClientDetail() {
             <p className="text-sm text-gray-700">{client.notes}</p>
           </div>
         )}
+
+        {/* Photo de la ferme */}
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Photo de la ferme</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50"
+              >
+                <Camera size={13} />
+                {uploadingPhoto ? 'Envoi...' : client.photo_ferme ? 'Changer' : 'Ajouter une photo'}
+              </button>
+              {client.photo_ferme && (
+                <button onClick={handleDeletePhoto} className="p-1.5 hover:bg-red-50 rounded-lg text-red-400">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+          <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+          {client.photo_ferme ? (
+            <img
+              src={client.photo_ferme}
+              alt="Ferme"
+              className="w-full max-h-64 object-cover rounded-xl border border-gray-100"
+            />
+          ) : (
+            <div
+              onClick={() => photoInputRef.current?.click()}
+              className="flex items-center justify-center h-28 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 text-sm cursor-pointer hover:border-green-300 hover:text-green-500 transition-colors"
+            >
+              <div className="text-center">
+                <Camera size={24} className="mx-auto mb-1 opacity-50" />
+                <span>Cliquez pour ajouter une photo</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}

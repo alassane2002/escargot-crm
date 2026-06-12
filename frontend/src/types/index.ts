@@ -12,6 +12,7 @@ export interface Client {
   date_ajout: string
   notes?: string
   statut: string
+  photo_ferme?: string
 }
 
 export interface Discussion {
