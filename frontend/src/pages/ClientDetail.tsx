@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2, MessageSquare, ShoppingCart, Bell, MessageCircle, Phone, Camera, X } from 'lucide-react'
 import Modal from '../components/Modal'
-import { getClient, getDiscussions, addDiscussion, deleteDiscussion, getVentes, getRelances, updateClient } from '../api'
-import type { Client, Discussion, Vente, Relance } from '../types'
+import { getClient, getDiscussions, addDiscussion, deleteDiscussion, getVentes, getRelances, getClientPhotos, addClientPhoto, deleteClientPhoto } from '../api'
+import type { Client, ClientPhoto, Discussion, Vente, Relance } from '../types'
 
 function openWhatsApp(phone: string, name: string) {
   const clean = phone.replace(/[\s\-().+]/g, '')
@@ -38,7 +38,9 @@ export default function ClientDetail() {
   const [showDiscModal, setShowDiscModal] = useState(false)
   const [discText, setDiscText] = useState('')
   const [activeTab, setActiveTab] = useState<'discussions' | 'ventes' | 'relances'>('discussions')
+  const [photos, setPhotos] = useState<ClientPhoto[]>([])
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [viewPhoto, setViewPhoto] = useState<string | null>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function ClientDetail() {
     getDiscussions(cid).then(r => setDiscussions(r.data))
     getVentes().then(r => setVentes(r.data.filter((v: Vente) => v.client_id === cid)))
     getRelances().then(r => setRelances(r.data.filter((rel: Relance) => rel.client_id === cid)))
+    getClientPhotos(cid).then(r => setPhotos(r.data))
   }, [id])
 
   const handleAddDisc = async () => {
@@ -59,23 +62,29 @@ export default function ClientDetail() {
   }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !id) return
+    const files = Array.from(e.target.files || [])
+    if (!files.length || !id) return
     setUploadingPhoto(true)
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const base64 = reader.result as string
-      await updateClient(parseInt(id), { photo_ferme: base64 })
-      setClient(prev => prev ? { ...prev, photo_ferme: base64 } : prev)
-      setUploadingPhoto(false)
+    for (const file of files) {
+      await new Promise<void>(resolve => {
+        const reader = new FileReader()
+        reader.onload = async () => {
+          const base64 = reader.result as string
+          const res = await addClientPhoto(parseInt(id), base64)
+          setPhotos(prev => [res.data, ...prev])
+          resolve()
+        }
+        reader.readAsDataURL(file)
+      })
     }
-    reader.readAsDataURL(file)
+    setUploadingPhoto(false)
+    if (photoInputRef.current) photoInputRef.current.value = ''
   }
 
-  const handleDeletePhoto = async () => {
-    if (!id || !confirm('Supprimer la photo de la ferme ?')) return
-    await updateClient(parseInt(id), { photo_ferme: null })
-    setClient(prev => prev ? { ...prev, photo_ferme: undefined } : prev)
+  const handleDeletePhoto = async (photoId: number) => {
+    if (!id || !confirm('Supprimer cette photo ?')) return
+    await deleteClientPhoto(parseInt(id), photoId)
+    setPhotos(prev => prev.filter(p => p.id !== photoId))
   }
 
   const handleDeleteDisc = async (discId: number) => {
@@ -149,41 +158,55 @@ export default function ClientDetail() {
           </div>
         )}
 
-        {/* Photo de la ferme */}
+        {/* Photos de la ferme */}
         <div className="mt-4 pt-4 border-t border-gray-100">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Photo de la ferme</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => photoInputRef.current?.click()}
-                disabled={uploadingPhoto}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50"
-              >
-                <Camera size={13} />
-                {uploadingPhoto ? 'Envoi...' : client.photo_ferme ? 'Changer' : 'Ajouter une photo'}
-              </button>
-              {client.photo_ferme && (
-                <button onClick={handleDeletePhoto} className="p-1.5 hover:bg-red-50 rounded-lg text-red-400">
-                  <X size={14} />
-                </button>
-              )}
-            </div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+              Photos de la ferme {photos.length > 0 && <span className="ml-1 bg-gray-100 text-gray-500 rounded-full px-1.5 py-0.5">{photos.length}</span>}
+            </p>
+            <button
+              onClick={() => photoInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50"
+            >
+              <Camera size={13} />
+              {uploadingPhoto ? 'Envoi...' : 'Ajouter des photos'}
+            </button>
           </div>
-          <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-          {client.photo_ferme ? (
-            <img
-              src={client.photo_ferme}
-              alt="Ferme"
-              className="w-full max-h-64 object-cover rounded-xl border border-gray-100"
-            />
-          ) : (
+          <input ref={photoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+          {photos.length === 0 ? (
             <div
               onClick={() => photoInputRef.current?.click()}
               className="flex items-center justify-center h-28 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 text-sm cursor-pointer hover:border-green-300 hover:text-green-500 transition-colors"
             >
               <div className="text-center">
                 <Camera size={24} className="mx-auto mb-1 opacity-50" />
-                <span>Cliquez pour ajouter une photo</span>
+                <span>Cliquez pour ajouter des photos</span>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {photos.map(p => (
+                <div key={p.id} className="relative group rounded-xl overflow-hidden border border-gray-100 aspect-square">
+                  <img
+                    src={p.photo}
+                    alt="Ferme"
+                    className="w-full h-full object-cover cursor-pointer"
+                    onClick={() => setViewPhoto(p.photo)}
+                  />
+                  <button
+                    onClick={() => handleDeletePhoto(p.id)}
+                    className="absolute top-1 right-1 p-1 bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <div
+                onClick={() => photoInputRef.current?.click()}
+                className="flex items-center justify-center aspect-square bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 cursor-pointer hover:border-green-300 hover:text-green-500 transition-colors"
+              >
+                <Plus size={24} />
               </div>
             </div>
           )}
@@ -311,6 +334,18 @@ export default function ClientDetail() {
             autoFocus
           />
         </Modal>
+      )}
+
+      {viewPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setViewPhoto(null)}
+        >
+          <button className="absolute top-4 right-4 text-white p-2 hover:bg-white/20 rounded-full">
+            <X size={24} />
+          </button>
+          <img src={viewPhoto} alt="Ferme" className="max-w-full max-h-full rounded-xl object-contain" />
+        </div>
       )}
     </div>
   )

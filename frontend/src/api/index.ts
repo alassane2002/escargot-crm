@@ -43,6 +43,11 @@ export const createClient = (data: unknown) => api.post('/clients', data)
 export const updateClient = (id: number, data: unknown) => api.put(`/clients/${id}`, data)
 export const deleteClient = (id: number) => api.delete(`/clients/${id}`)
 
+// Client photos
+export const getClientPhotos = (clientId: number) => api.get(`/clients/${clientId}/photos`)
+export const addClientPhoto = (clientId: number, photo: string) => api.post(`/clients/${clientId}/photos`, { photo })
+export const deleteClientPhoto = (clientId: number, photoId: number) => api.delete(`/clients/${clientId}/photos/${photoId}`)
+
 // Discussions
 export const getDiscussions = (clientId: number) => api.get(`/clients/${clientId}/discussions`)
 export const addDiscussion = (clientId: number, data: unknown) => api.post(`/clients/${clientId}/discussions`, data)

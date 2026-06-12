@@ -12,7 +12,13 @@ export interface Client {
   date_ajout: string
   notes?: string
   statut: string
-  photo_ferme?: string
+}
+
+export interface ClientPhoto {
+  id: number
+  client_id: number
+  photo: string
+  date_ajout: string
 }
 
 export interface Discussion {

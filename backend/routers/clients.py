@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db
-from models import Client, Discussion
-from schemas import ClientCreate, ClientUpdate, ClientResponse, DiscussionCreate, DiscussionResponse
+from models import Client, Discussion, ClientPhoto
+from schemas import ClientCreate, ClientUpdate, ClientResponse, DiscussionCreate, DiscussionResponse, ClientPhotoResponse
 from auth import get_current_user
 
 router = APIRouter()
@@ -95,3 +95,29 @@ def delete_discussion(client_id: int, discussion_id: int, db: Session = Depends(
     db.delete(disc)
     db.commit()
     return {"message": "Discussion supprimée"}
+
+
+@router.get("/{client_id}/photos", response_model=List[ClientPhotoResponse])
+def get_photos(client_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    return db.query(ClientPhoto).filter(ClientPhoto.client_id == client_id).order_by(ClientPhoto.date_ajout.desc()).all()
+
+
+@router.post("/{client_id}/photos", response_model=ClientPhotoResponse)
+def add_photo(client_id: int, payload: dict, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    if not db.query(Client).filter(Client.id == client_id).first():
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    p = ClientPhoto(client_id=client_id, photo=payload["photo"])
+    db.add(p)
+    db.commit()
+    db.refresh(p)
+    return p
+
+
+@router.delete("/{client_id}/photos/{photo_id}")
+def delete_photo(client_id: int, photo_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    p = db.query(ClientPhoto).filter(ClientPhoto.id == photo_id, ClientPhoto.client_id == client_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Photo non trouvée")
+    db.delete(p)
+    db.commit()
+    return {"message": "Photo supprimée"}

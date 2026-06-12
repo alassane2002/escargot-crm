@@ -32,6 +32,16 @@ class Client(Base):
     discussions = relationship("Discussion", back_populates="client", cascade="all, delete-orphan")
     relances = relationship("Relance", back_populates="client", cascade="all, delete-orphan")
     ventes = relationship("Vente", back_populates="client", cascade="all, delete-orphan")
+    photos = relationship("ClientPhoto", back_populates="client", cascade="all, delete-orphan")
+
+
+class ClientPhoto(Base):
+    __tablename__ = "client_photos"
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey("clients.id"))
+    photo = Column(Text)
+    date_ajout = Column(DateTime, default=datetime.utcnow)
+    client = relationship("Client", back_populates="photos")
 
 
 class Discussion(Base):

@@ -47,6 +47,14 @@ class ClientUpdate(BaseModel):
     statut: Optional[str] = None
     photo_ferme: Optional[str] = None
 
+class ClientPhotoResponse(BaseModel):
+    id: int
+    client_id: int
+    photo: str
+    date_ajout: datetime
+    class Config:
+        from_attributes = True
+
 class ClientResponse(ClientBase):
     id: int
     date_ajout: datetime
