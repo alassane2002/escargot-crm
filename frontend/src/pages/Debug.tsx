@@ -13,19 +13,25 @@ export default function Debug() {
     setResults([])
     setRunning(true)
 
-    log(`VITE_API_URL = "${import.meta.env.VITE_API_URL}"`)
+    const rawUrl = import.meta.env.VITE_API_URL || ''
+    const firstCharCode = rawUrl.charCodeAt(0)
+    log(`VITE_API_URL = "${rawUrl}"`)
+    log(`Premier char code: ${firstCharCode} (doit être 104='h', si 65279=BOM problème)`)
     log(`API_ROOT = "${API_ROOT}"`)
-    log(`API_URL = "${API_URL}"`)
     log('---')
 
     // Test 1: GET /
     log('Test 1: GET backend root...')
     try {
-      const r = await fetch(`${API_ROOT}/`, { signal: AbortSignal.timeout(15000) })
-      const d = await r.json()
-      log(`✓ GET / → ${r.status} : ${JSON.stringify(d)}`)
+      const r = await fetch(`${API_ROOT}/`, { signal: AbortSignal.timeout(60000) })
+      const txt = await r.text()
+      if (txt.includes('{')) {
+        log(`✓ GET / → ${r.status} JSON: ${txt.substring(0, 80)}`)
+      } else {
+        log(`✗ GET / → ${r.status} HTML (backend endormi): ${txt.substring(0, 120).replace(/\s+/g, ' ')}`)
+      }
     } catch (e) {
-      log(`✗ GET / → ERREUR: ${e}`)
+      log(`✗ GET / → ERREUR RESEAU: ${e}`)
     }
 
     // Test 2: OPTIONS preflight
@@ -51,17 +57,28 @@ export default function Debug() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'admin', password: 'admin123' }),
-        signal: AbortSignal.timeout(15000)
+        signal: AbortSignal.timeout(60000)
       })
+      const txt = await r.text().catch(() => '')
       if (r.ok) {
-        const d = await r.json()
-        log(`✓ POST login → ${r.status}, token: ${d.access_token?.substring(0,20)}...`)
+        log(`✓ POST login → ${r.status}, réponse: ${txt.substring(0,80)}`)
       } else {
-        const txt = await r.text().catch(() => '')
-        log(`✗ POST login → ${r.status}: ${txt.substring(0,100)}`)
+        log(`✗ POST login → ${r.status}: "${txt.substring(0,150).replace(/\s+/g,' ')}"`)
       }
     } catch (e) {
       log(`✗ POST login → ERREUR RESEAU: ${e}`)
+    }
+
+    // Test 4: Direct URL test
+    log('Test 4: URL directe hardcodée...')
+    try {
+      const r = await fetch('https://escargot-crm-backend.onrender.com/', {
+        signal: AbortSignal.timeout(60000)
+      })
+      const txt = await r.text()
+      log(`URL directe → ${r.status}: ${txt.substring(0,80)}`)
+    } catch (e) {
+      log(`URL directe → ERREUR: ${e}`)
     }
 
     setRunning(false)
