@@ -40,6 +40,7 @@ export default function ClientDetail() {
   const [activeTab, setActiveTab] = useState<'discussions' | 'ventes' | 'relances'>('discussions')
   const [photos, setPhotos] = useState<ClientPhoto[]>([])
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [photoError, setPhotoError] = useState('')
   const [viewPhoto, setViewPhoto] = useState<string | null>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
@@ -65,17 +66,28 @@ export default function ClientDetail() {
     const files = Array.from(e.target.files || [])
     if (!files.length || !id) return
     setUploadingPhoto(true)
-    for (const file of files) {
-      await new Promise<void>(resolve => {
-        const reader = new FileReader()
-        reader.onload = async () => {
-          const base64 = reader.result as string
-          const res = await addClientPhoto(parseInt(id), base64)
-          setPhotos(prev => [res.data, ...prev])
-          resolve()
-        }
-        reader.readAsDataURL(file)
-      })
+    setPhotoError('')
+    try {
+      for (const file of files) {
+        await new Promise<void>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = async () => {
+            try {
+              const base64 = reader.result as string
+              const res = await addClientPhoto(parseInt(id), base64)
+              setPhotos(prev => [res.data, ...prev])
+              resolve()
+            } catch (err) {
+              reject(err)
+            }
+          }
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+      }
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setPhotoError(msg || 'Erreur lors de l\'envoi de la photo.')
     }
     setUploadingPhoto(false)
     if (photoInputRef.current) photoInputRef.current.value = ''
@@ -174,6 +186,9 @@ export default function ClientDetail() {
             </button>
           </div>
           <input ref={photoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+          {photoError && (
+            <p className="text-xs text-red-600 mb-2">{photoError}</p>
+          )}
           {photos.length === 0 ? (
             <div
               onClick={() => photoInputRef.current?.click()}

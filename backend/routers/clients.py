@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db
 from models import Client, Discussion, ClientPhoto
-from schemas import ClientCreate, ClientUpdate, ClientResponse, DiscussionCreate, DiscussionResponse, ClientPhotoResponse
+from schemas import ClientCreate, ClientUpdate, ClientResponse, DiscussionCreate, DiscussionResponse, ClientPhotoResponse, ClientPhotoCreate
 from auth import get_current_user
 
 router = APIRouter()
@@ -103,10 +103,10 @@ def get_photos(client_id: int, db: Session = Depends(get_db), current_user=Depen
 
 
 @router.post("/{client_id}/photos", response_model=ClientPhotoResponse)
-def add_photo(client_id: int, payload: dict, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def add_photo(client_id: int, payload: ClientPhotoCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     if not db.query(Client).filter(Client.id == client_id).first():
         raise HTTPException(status_code=404, detail="Client non trouvé")
-    p = ClientPhoto(client_id=client_id, photo=payload["photo"])
+    p = ClientPhoto(client_id=client_id, photo=payload.photo)
     db.add(p)
     db.commit()
     db.refresh(p)

@@ -47,6 +47,9 @@ class ClientUpdate(BaseModel):
     statut: Optional[str] = None
     photo_ferme: Optional[str] = None
 
+class ClientPhotoCreate(BaseModel):
+    photo: str
+
 class ClientPhotoResponse(BaseModel):
     id: int
     client_id: int
